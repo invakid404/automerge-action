@@ -377,7 +377,6 @@ async function handleScheduleTriggerOrRepositoryDispatch(context) {
 
   if (updated === 0) {
     logger.info("No PRs have been updated/merged");
-    return;
   }
 }
 
@@ -413,7 +412,7 @@ async function fetchPullRequest(context, repository, issue) {
 async function fetchApprovalReviewCount(context, pullRequest) {
   const {
     octokit,
-    config: { mergeRequiredApprovals }
+    config: { mergeRequiredApprovals, mergeMandatoryReviewers }
   } = context;
   const { number } = pullRequest;
 
@@ -432,7 +431,14 @@ async function fetchApprovalReviewCount(context, pullRequest) {
   const approvingReviewers = reviews
     .filter(review => review.state === "APPROVED")
     .map(review => review.user.login);
-  const uniqueApprovingReviewers = [...new Set(approvingReviewers)];
+
+  const mandatoryReviewers = mergeMandatoryReviewers.size
+    ? approvingReviewers.filter(reviewer =>
+        mergeMandatoryReviewers.has(reviewer)
+      )
+    : approvingReviewers;
+
+  const uniqueApprovingReviewers = [...new Set(mandatoryReviewers)];
 
   logger.trace("Approval reviewers:", uniqueApprovingReviewers);
   return uniqueApprovingReviewers.length;
@@ -607,6 +613,9 @@ function createConfig(env = {}) {
     "MERGE_REQUIRED_APPROVALS",
     0
   );
+  const mergeMandatoryReviewers = new Set(
+    (env.MERGE_MANDATORY_REVIEWERS || "").split(",").filter(Boolean)
+  );
   const mergeDeleteBranch = env.MERGE_DELETE_BRANCH === "true";
   const mergeMethodLabels = parseMergeMethodLabels(env.MERGE_METHOD_LABELS);
   const mergeMethodLabelRequired = env.MERGE_METHOD_LABEL_REQUIRED === "true";
@@ -631,6 +640,7 @@ function createConfig(env = {}) {
     mergeRetries,
     mergeRetrySleep,
     mergeRequiredApprovals,
+    mergeMandatoryReviewers,
     mergeDeleteBranch,
     updateLabels,
     updateMethod,
@@ -648,6 +658,7 @@ function tmpdir(callback) {
       await fse.remove(path);
     }
   }
+
   return new Promise((resolve, reject) => {
     tmp.dir((err, path) => {
       if (err) {

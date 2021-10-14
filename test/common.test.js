@@ -22,6 +22,7 @@ test("createConfig", () => {
     mergeRetries: 3,
     mergeRetrySleep: 5000,
     mergeRequiredApprovals: 0,
+    mergeMandatoryReviewers: new Set(),
     mergeRemoveLabels: [""],
     updateMethod: "merge",
     updateLabels: {
@@ -58,6 +59,7 @@ test("createConfig with arbitrary pull request (as string)", () => {
     mergeRetries: 3,
     mergeRetrySleep: 5000,
     mergeRequiredApprovals: 0,
+    mergeMandatoryReviewers: new Set(),
     mergeRemoveLabels: [""],
     updateMethod: "merge",
     updateLabels: {
@@ -96,6 +98,7 @@ test("createConfig with arbitrary pull request (as number)", () => {
     mergeRetries: 3,
     mergeRetrySleep: 5000,
     mergeRequiredApprovals: 0,
+    mergeMandatoryReviewers: new Set(),
     mergeRemoveLabels: [""],
     updateMethod: "merge",
     updateLabels: {
@@ -134,6 +137,7 @@ test("createConfig with arbitrary pull request in another repo", () => {
     mergeRetries: 3,
     mergeRetrySleep: 5000,
     mergeRequiredApprovals: 0,
+    mergeMandatoryReviewers: new Set(),
     mergeRemoveLabels: [""],
     updateMethod: "merge",
     updateLabels: {
