@@ -409,17 +409,13 @@ async function fetchPullRequest(context, repository, issue) {
   return pullRequest;
 }
 
-async function fetchApprovalReviewCount(context, pullRequest) {
+async function fetchApprovalReviewers(context, pullRequest) {
   const {
     octokit,
-    config: { mergeRequiredApprovals, mergeMandatoryReviewers }
+    config: { mergeMandatoryReviewers }
   } = context;
-  const { number } = pullRequest;
 
-  if (mergeRequiredApprovals === 0) {
-    // If we don't care about review approvals, let's short circuit.
-    return 0;
-  }
+  const { number } = pullRequest;
 
   logger.debug("Getting reviews for", number, "...");
   let { data: reviews } = await octokit.pulls.listReviews({
@@ -428,20 +424,37 @@ async function fetchApprovalReviewCount(context, pullRequest) {
     pull_number: number
   });
 
-  const approvingReviewers = reviews
-    .filter(review => review.state === "APPROVED")
-    .map(review => review.user.login);
+  const approvingReviewers = [
+    ...new Set(
+      reviews
+        .filter(review => review.state === "APPROVED")
+        .map(review => review.user.login)
+    )
+  ];
 
-  const mandatoryReviewers = mergeMandatoryReviewers.size
-    ? approvingReviewers.filter(reviewer =>
-        mergeMandatoryReviewers.has(reviewer)
-      )
-    : approvingReviewers;
+  if (!mergeMandatoryReviewers.size) {
+    return approvingReviewers;
+  }
 
-  const uniqueApprovingReviewers = [...new Set(mandatoryReviewers)];
+  return approvingReviewers.filter(reviewer =>
+    mergeMandatoryReviewers.has(reviewer)
+  );
+}
 
-  logger.trace("Approval reviewers:", uniqueApprovingReviewers);
-  return uniqueApprovingReviewers.length;
+async function fetchApprovalReviewCount(context, pullRequest) {
+  const {
+    config: { mergeRequiredApprovals }
+  } = context;
+
+  if (mergeRequiredApprovals === 0) {
+    // If we don't care about review approvals, let's short circuit.
+    return 0;
+  }
+
+  const approvalReviewers = await fetchApprovalReviewers(context, pullRequest);
+
+  logger.trace("Approval reviewers:", approvalReviewers);
+  return approvalReviewers.length;
 }
 
 module.exports = { executeLocally, executeGitHubAction };
